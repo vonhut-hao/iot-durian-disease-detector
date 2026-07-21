@@ -19,14 +19,18 @@ export class SensorService {
     const resultTimestamp = Timestamp.fromDate(new Date(resultTime));
     const batch = db.batch();
 
+    // Use a simple in-memory cache for data streams to avoid N+1 queries
+    // In a real production app, this could be moved outside the function or use Redis
+    const streamCache = new Map<string, string>();
+
     for (const record of sensorRecords) {
       const { dataStreamId, result } = record;
 
       if (!dataStreamId || !result) continue;
 
       // 1. Separate value and unit (e.g., "31.5oC" -> value: 31.5, unit: "oC")
-      // Regex matches digits/decimals followed by any string
-      const match = result.match(/^([\d.]+)(.*)$/);
+      // Regex matches optional +/- then digits/decimals followed by any string
+      const match = result.match(/^([+-]?[\d.]+)(.*)$/);
       let value = 0;
       let unit = '';
 
@@ -38,16 +42,18 @@ export class SensorService {
         continue;
       }
 
-      // 2. Fetch dataStream info to get stationId
-      // To optimize, you could add caching here (e.g. using a Map or Redis)
-      const streamDoc = await db.collection('data_streams').doc(dataStreamId).get();
-      let stationId = 'unknown';
+      // 2. Fetch dataStream info to get stationId with Caching
+      let stationId = streamCache.get(dataStreamId) || 'unknown';
 
-      if (streamDoc.exists) {
-        const streamData = streamDoc.data() as DataStream;
-        stationId = streamData.stationId;
-      } else {
-        console.warn(`Unknown dataStreamId: ${dataStreamId}. Assigning stationId = 'unknown'`);
+      if (stationId === 'unknown') {
+        const streamDoc = await db.collection('data_streams').doc(dataStreamId).get();
+        if (streamDoc.exists) {
+          const streamData = streamDoc.data() as DataStream;
+          stationId = streamData.stationId;
+          streamCache.set(dataStreamId, stationId);
+        } else {
+          console.warn(`Unknown dataStreamId: ${dataStreamId}. Assigning stationId = 'unknown'`);
+        }
       }
 
       // 3. Prepare document for sensor_logs
