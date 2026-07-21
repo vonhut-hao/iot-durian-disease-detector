@@ -1,0 +1,31 @@
+import { MqttControlPayload } from '../types/mqtt.types';
+import { TaskService } from '../services/task.service';
+import { MqttPublisher } from './publisher';
+
+export const handleStationConfirm = async (topic: string, message: Buffer) => {
+  try {
+    const payloadStr = message.toString();
+    const payload = JSON.parse(payloadStr) as MqttControlPayload;
+    
+    if (!payload.targets || !payload.taskingParameters) {
+      console.warn(`Invalid control confirm payload on ${topic}`);
+      return;
+    }
+
+    // Extract stationId from topic (publish/station/{stationId})
+    const topicParts = topic.split('/');
+    const stationId = topicParts[topicParts.length - 1];
+    
+    const taskIds = payload.targets.map(t => t.taskId);
+
+    console.log(`[Control Confirm] Received echo from ${stationId} for taskIds: ${taskIds.join(', ')}`);
+    
+    // Attempt to confirm existing pending tasks
+    await TaskService.confirmTasksByTaskIds(taskIds, payload.errorMessage);
+
+    // TODO: Implement Physical Button Sync (Cụm 5)
+
+  } catch (error) {
+    console.error(`Error parsing station confirm payload on ${topic}:`, error);
+  }
+};

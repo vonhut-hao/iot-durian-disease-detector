@@ -14,3 +14,14 @@ export interface SensorLog {
   unit: string;
   resultTime: firestore.Timestamp;
 }
+
+export interface TaskRecord {
+  stationId: string;
+  targets: { taskId: number; taskingCapabilityId: number; }[];
+  taskingParameters: { actionType: string; action: number; };
+  status: 'pending' | 'confirmed' | 'failed' | 'timeout';
+  errorMessage: string | null;
+  source: 'dashboard' | 'physical_button';
+  createdAt: firestore.Timestamp;
+  confirmedAt: firestore.Timestamp | null;
+}
