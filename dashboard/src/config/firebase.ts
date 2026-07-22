@@ -1,20 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBdNnrgBGmAnuCZ3ZK-hJ2M8k-suFrG47c",
-  authDomain: "ctu-smartattendance.firebaseapp.com",
-  projectId: "ctu-smartattendance",
-  storageBucket: "ctu-smartattendance.firebasestorage.app",
-  messagingSenderId: "482817229475",
-  appId: "1:482817229475:web:fbe7193e4742d453b8b516",
-  measurementId: "G-18J5JHMB2G"
+  apiKey: "AIzaSyDPKQg3ozihEaGhSojBT8KY8W--Q5yoTwc",
+  authDomain: "iot-durian-disease-detector.firebaseapp.com",
+  projectId: "iot-durian-disease-detector",
+  storageBucket: "iot-durian-disease-detector.firebasestorage.app",
+  messagingSenderId: "949890335214",
+  appId: "1:949890335214:web:a7cdb99081a88052548eff",
+  measurementId: "G-4M55DXBX6W"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-export { db, auth };
+export { db };
