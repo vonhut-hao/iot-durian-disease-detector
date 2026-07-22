@@ -1,6 +1,6 @@
 import { db } from '../config/firebase';
 import { TaskRecord } from '../types/firestore.types';
-import { firestore } from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export class TaskService {
   static async createTask(
@@ -18,23 +18,22 @@ export class TaskService {
       status,
       errorMessage: null,
       source,
-      createdAt: firestore.Timestamp.now(),
-      confirmedAt: status === 'confirmed' ? firestore.Timestamp.now() : null,
+      createdAt: Timestamp.now(),
+      confirmedAt: status === 'confirmed' ? Timestamp.now() : null,
     };
 
     await taskRef.set(taskData);
     return taskRef.id;
   }
 
-  static async confirmTasksByTaskIds(taskIds: number[], errorMessage: string | null = null): Promise<void> {
-    // Queries all pending tasks that contain the received taskIds
-    if (taskIds.length === 0) return;
+  static async confirmTasksByTaskIds(taskIds: number[], errorMessage: string | null = null): Promise<number> {
+    if (taskIds.length === 0) return 0;
 
     const tasksSnapshot = await db.collection('tasks')
       .where('status', '==', 'pending')
       .get();
       
-    if (tasksSnapshot.empty) return;
+    if (tasksSnapshot.empty) return 0;
 
     const batch = db.batch();
     let updatedCount = 0;
@@ -47,17 +46,16 @@ export class TaskService {
         batch.update(doc.ref, {
           status: errorMessage ? 'failed' : 'confirmed',
           errorMessage: errorMessage || null,
-          confirmedAt: firestore.Timestamp.now()
+          confirmedAt: Timestamp.now()
         });
         
-        // Also update the relay states in station doc if confirmed
         if (!errorMessage) {
           data.targets.forEach(t => {
             const relayRef = db.collection('stations').doc(data.stationId).collection('relays').doc(t.taskingCapabilityId.toString());
             batch.set(relayRef, {
               actionType: data.taskingParameters.actionType,
               state: data.taskingParameters.action,
-            }, { merge: true }); // Use merge in case name exists
+            }, { merge: true });
           });
         }
         
@@ -69,5 +67,29 @@ export class TaskService {
       await batch.commit();
       console.log(`Confirmed ${updatedCount} tasks in DB`);
     }
+    
+    return updatedCount;
+  }
+
+  static async syncPhysicalButtonState(
+    stationId: string,
+    targets: { taskId: number; taskingCapabilityId: number; }[],
+    taskingParameters: { actionType: string; action: number; }
+  ): Promise<void> {
+    // 1. Create a confirmed task with source physical_button
+    await this.createTask(stationId, targets, taskingParameters, 'physical_button', 'confirmed');
+
+    // 2. Update relays in stations collection
+    const batch = db.batch();
+    targets.forEach(t => {
+      const relayRef = db.collection('stations').doc(stationId).collection('relays').doc(t.taskingCapabilityId.toString());
+      batch.set(relayRef, {
+        actionType: taskingParameters.actionType,
+        state: taskingParameters.action,
+      }, { merge: true });
+    });
+    
+    await batch.commit();
+    console.log(`Synced physical button state for station ${stationId}`);
   }
 }

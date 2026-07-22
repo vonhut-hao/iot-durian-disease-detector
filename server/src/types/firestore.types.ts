@@ -1,4 +1,4 @@
-import { firestore } from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export interface DataStream {
   stationId: string;
@@ -12,7 +12,7 @@ export interface SensorLog {
   stationId: string;
   value: number;
   unit: string;
-  resultTime: firestore.Timestamp;
+  resultTime: Timestamp;
 }
 
 export interface TaskRecord {
@@ -22,6 +22,23 @@ export interface TaskRecord {
   status: 'pending' | 'confirmed' | 'failed' | 'timeout';
   errorMessage: string | null;
   source: 'dashboard' | 'physical_button';
-  createdAt: firestore.Timestamp;
-  confirmedAt: firestore.Timestamp | null;
+  createdAt: Timestamp;
+  confirmedAt: Timestamp | null;
+}
+
+export interface Tree {
+  id: string; // The treeId, e.g., 'T-001'
+  name: string;
+  variety: string;
+  plantedDate: Timestamp;
+  stationId: string;
+  row: string;
+  notes: string;
+}
+
+export interface Station {
+  id: string;
+  name: string;
+  location?: string;
+  // relays will be a subcollection in firestore
 }

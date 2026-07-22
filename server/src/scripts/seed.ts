@@ -1,81 +1,86 @@
-import { db } from '../config/firebase'
-import { Timestamp } from 'firebase-admin/firestore'
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
-async function seed() {
-  console.log("Bắt đầu seed data vào Firestore...");
+// Initialize firebase admin directly here for the seed script
+import serviceAccount from '../../firebase-service-account.json';
 
-  // 1. Seed Room
-  // await db.collection('rooms').doc('104-DI')
-  // .set({
-  //   name: "Phòng 104/DI",
-  //   building: "DI",
-  //   secretKey: "2MR7CMHUHLSVPRRKL3PDWHVXRQTPS54Q" // Base32 test key
-  // });
-  // console.log("Seeded Room: 104-DI");
-
-  // await db.collection('rooms').doc('106-DI')
-  // .set({
-  //   name: "Phòng 106/DI",
-  //   building: "DI",
-  //   secretKey: "R45K3EKY2U7N5VSP5XKID4KN2KX5MDHL" // Base32 test key
-  // });
-  // console.log("Seeded Room: 106-DI");
-
-  // 2. Seed Users
-  // Sinh viên
-  // await db.collection('users').doc('user_student_1').set({
-  //   email: "vy@gmail.com",
-  //   name: "Tiêu Bình Vỹ",
-  //   role: "student",
-  //   studentId: "B2303859"
-  // });
-
-  // await db.collection('users').doc('user_student_2').set({
-  //   email: "hao@gmail.com",
-  //   name: "Võ Nhựt Hào",
-  //   role: "student",
-  //   studentId: "B2303808"
-  // });
-
-  // await db.collection('users').doc('user_student_3').set({
-  //   email: "hien@gmail.com",
-  //   name: "Trần Thị Thuý Hiền",
-  //   role: "student",
-  //   studentId: "B2303813"
-  // });
-
-  // Giảng viên
-  // await db.collection('users').doc('user_teacher_1').set({
-  //   email: "viet.gv@gmail.com",
-  //   name: "Trương Xuân Việt",
-  //   role: "teacher",
-  //   teacherId: "GV001"
-  // });
-  // console.log("Seeded Users (Students & Teacher)");
-
-  // 3. Seed Session
-  // Giả lập thời gian: bắt đầu 10 phút trước, kết thúc 1 tiếng rưỡi sau
-  const now = new Date();
-  const startTime = new Date(now.getTime() - 10 * 60000);
-  const endTime = new Date(now.getTime() + 90 * 60000);
-
-  const sessionRef = db.collection('sessions').doc('N0A1PqwWSh2fmty10h9d');
-  await sessionRef.set({
-    roomId: "104-DI",
-    courseCode: "CT250E",
-    courseName: "Niên luận ngành Kỹ thuật phần mềm",
-    teacherId: "GV002",
-    startTime: Timestamp.fromDate(startTime),
-    endTime: Timestamp.fromDate(endTime),
-    lateAfterMinutes: 15,
-    enrolledStudents: [
-      { studentId: "B2303819", name: "Nguyễn Trường Hưng" },
-      { studentId: "B2303859", name: "Tiêu Bình Vỹ" }
-    ]
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount as any)
   });
+}
 
-  console.log("Seed data completed!");
+const db = getFirestore();
+
+async function seedDatabase() {
+  console.log('🌱 Starting database seed...');
+  
+  // 1. Create a mock Station
+  const stationId = 'station-01';
+  const stationRef = db.collection('stations').doc(stationId);
+  await stationRef.set({
+    name: 'Trạm vườn Lô A',
+    location: '10.029939, 105.770615' // CTU coords
+  });
+  
+  // Setup relays for station
+  await stationRef.collection('relays').doc('6').set({
+    name: 'Van tưới 1',
+    state: 0,
+    actionType: 'control'
+  });
+  console.log(`✅ Created Station: ${stationId}`);
+
+  // 2. Create mock Data Streams
+  const streams = [
+    { id: '2', sensorType: 'temperature', unit: 'oC', name: 'Nhiệt kế DHT22' },
+    { id: '3', sensorType: 'humidity', unit: '%rH', name: 'Ẩm kế DHT22' },
+    { id: '4', sensorType: 'soil_moisture', unit: '%', name: 'Cảm biến ẩm đất' }
+  ];
+  
+  for (const stream of streams) {
+    await db.collection('data_streams').doc(stream.id).set({
+      stationId,
+      sensorType: stream.sensorType,
+      unit: stream.unit,
+      name: stream.name
+    });
+  }
+  console.log(`✅ Created ${streams.length} Data Streams`);
+
+  // 3. Create mock Trees
+  const trees = [
+    { id: 'T-001', name: 'Sầu Riêng Ri6 #01', variety: 'Ri6', row: 'A', notes: 'Cây khỏe, tán rộng', stationId },
+    { id: 'T-002', name: 'Sầu Riêng Ri6 #02', variety: 'Ri6', row: 'A', notes: 'Đang ra trái bói', stationId },
+    { id: 'T-003', name: 'Sầu Riêng Monthong #01', variety: 'Monthong', row: 'B', notes: 'Cần bón thêm phân', stationId },
+  ];
+
+  for (const tree of trees) {
+    const { id, ...treeData } = tree;
+    await db.collection('trees').doc(id).set({
+      ...treeData,
+      plantedDate: Timestamp.fromDate(new Date('2022-05-10'))
+    });
+  }
+  console.log(`✅ Created ${trees.length} Trees`);
+  
+  // 4. Create some initial sensor logs
+  const batch = db.batch();
+  for (const stream of streams) {
+    const logRef = db.collection('sensor_logs').doc();
+    batch.set(logRef, {
+      dataStreamId: stream.id,
+      stationId,
+      value: stream.sensorType === 'temperature' ? 31.5 : (stream.sensorType === 'humidity' ? 78.2 : 65.0),
+      unit: stream.unit,
+      resultTime: Timestamp.now()
+    });
+  }
+  await batch.commit();
+  console.log(`✅ Created initial sensor logs`);
+
+  console.log('🎉 Seeding complete!');
   process.exit(0);
 }
 
-seed().catch(console.error);
+seedDatabase().catch(console.error);

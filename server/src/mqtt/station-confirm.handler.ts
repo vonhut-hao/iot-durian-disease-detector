@@ -20,10 +20,17 @@ export const handleStationConfirm = async (topic: string, message: Buffer) => {
 
     console.log(`[Control Confirm] Received echo from ${stationId} for taskIds: ${taskIds.join(', ')}`);
     
-    // Attempt to confirm existing pending tasks
-    await TaskService.confirmTasksByTaskIds(taskIds, payload.errorMessage);
+    const updatedCount = await TaskService.confirmTasksByTaskIds(taskIds, payload.errorMessage);
 
-    // TODO: Implement Physical Button Sync (Cụm 5)
+    // Cụm 5: Physical Button Sync
+    if (updatedCount === 0 && !payload.errorMessage) {
+      console.log(`[Physical Button Sync] No pending tasks matched for ${stationId}. Syncing state...`);
+      await TaskService.syncPhysicalButtonState(stationId, payload.targets, payload.taskingParameters);
+      
+      // Loop-back the exact payload to acknowledge to hardware
+      await MqttPublisher.publishControlCommand(stationId, payload);
+      console.log(`[Physical Button Sync] Loop-back ACK sent to ${stationId}`);
+    }
 
   } catch (error) {
     console.error(`Error parsing station confirm payload on ${topic}:`, error);

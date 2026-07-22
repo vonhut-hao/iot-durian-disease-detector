@@ -4,6 +4,7 @@ import { env } from './config/env';
 import './config/firebase';
 import './config/mqtt'; // Initialize MQTT connection
 import { deviceRoute } from './routes/device.route';
+import { treeRoute } from './routes/tree.route';
 
 const app = new Elysia()
   .onError(({ error }) => {
@@ -17,6 +18,7 @@ const app = new Elysia()
     })
   )
   .use(deviceRoute)
+  .use(treeRoute)
   .get("/api/health", () => ({ status: "ok", timestamp: new Date().toISOString() }))
   .listen({
     port: env.PORT,
