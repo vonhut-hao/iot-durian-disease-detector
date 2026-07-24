@@ -1,16 +1,21 @@
-# CTU-SmartAttendance Backend Server
+# IoT Durian Backend Server
 
-This repository contains the backend service for the CTU-SmartAttendance system (Can Tho University). The server provides RESTful APIs for mobile check-in applications and serves the web-based instructor dashboard.
+This repository contains the backend service for the IoT Durian Disease Detector & Monitoring System. The server acts as a bridge between the frontend dashboard and the physical IoT hardware out in the field, providing RESTful APIs and functioning as an active MQTT client.
 
 ## Architecture & Technology Stack
-- **ElysiaJS**: High-performance web framework for the API layer.
+
+- **ElysiaJS**: High-performance web framework used for the REST API layer.
 - **Bun**: JavaScript runtime and package manager.
-- **Firebase Admin SDK**: Server-side integration with Firestore database for secure, admin-level data operations.
+- **MQTT.js**: Client library handling Pub/Sub communication with the HiveMQ broker for telemetry ingestion and device control.
+- **Firebase Admin SDK**: Server-side integration with Firestore database for secure, admin-level data operations and logging.
 - **Static File Serving**: The compiled React dashboard (`../dashboard/dist`) is served statically via the `@elysia/static` plugin from the `public` directory.
 
 ## Development Setup
 
 The backend utilizes `bun` for dependency management and execution.
+
+### Prerequisites
+Ensure that the `firebase-service-account.json` file is correctly placed in the root of the server directory. This file is strictly required by the Firebase Admin SDK to authenticate securely. Furthermore, ensure your `.env` file is configured with the necessary MQTT broker credentials and application ports.
 
 ```bash
 # 1. Install dependencies
@@ -21,18 +26,19 @@ bun install
 bun run dev
 ```
 
-Note: Ensure that the `firebase-service-account.json` file is correctly placed and configured as per your environment settings, as it is required by the Firebase Admin SDK to authenticate and bypass client-side security rules.
+Upon startup, the server will connect to the MQTT broker, subscribe to the configured sensor telemetry and hardware confirmation topics, and begin listening for API requests.
 
 ## Production Build
 
-To prepare the server for production deployment, you can compile the TypeScript codebase into a standalone executable binary using Bun.
+To prepare the server for production deployment, compile the TypeScript codebase into a standalone executable binary using Bun.
 
 ```bash
 # Compile the server application
 bun run build
 ```
 
-This command generates an executable named `server` which can be executed directly without requiring the Bun runtime to be installed on the target machine.
+This command generates an executable that can be run directly without requiring the Bun runtime to be installed on the target machine.
 
-## Database Migration Note
-The project has been migrated from PostgreSQL to Firebase Firestore. Legacy ORM dependencies (Drizzle ORM) and schema files have been completely removed. All data operations are now handled exclusively via the Firebase Admin SDK.
+## Database & Messaging Note
+
+All data operations are handled exclusively via the Firebase Admin SDK interacting with Firestore. Hardware interactions bypass direct HTTP calls entirely, strictly utilizing the MQTT protocol to push control tasks and receive echo-confirmations to ensure execution reliability.
