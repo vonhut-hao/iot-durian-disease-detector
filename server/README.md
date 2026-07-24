@@ -1,6 +1,6 @@
 # IoT Durian Backend Server
 
-This repository contains the backend service for the IoT Durian Disease Detector & Monitoring System. The server acts as a bridge between the frontend dashboard and the physical IoT hardware out in the field, providing RESTful APIs and functioning as an active MQTT client.
+This repository contains the backend service for the IoT Durian Disease Detector & Monitoring System. The server acts as a bridge between the frontend frontend and the physical IoT hardware out in the field, providing RESTful APIs and functioning as an active MQTT client.
 
 ## Architecture & Technology Stack
 
@@ -8,7 +8,7 @@ This repository contains the backend service for the IoT Durian Disease Detector
 - **Bun**: JavaScript runtime and package manager.
 - **MQTT.js**: Client library handling Pub/Sub communication with the HiveMQ broker for telemetry ingestion and device control.
 - **Firebase Admin SDK**: Server-side integration with Firestore database for secure, admin-level data operations and logging.
-- **Static File Serving**: The compiled React dashboard (`../dashboard/dist`) is served statically via the `@elysia/static` plugin from the `public` directory.
+- **Static File Serving**: The compiled React frontend (`../frontend/dist`) is served statically via the `@elysia/static` plugin from the `public` directory.
 
 ## Development Setup
 
