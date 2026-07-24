@@ -1,4 +1,4 @@
-# IoT Durian Dashboard
+# IoT Durian Frontend
 
 This is the web-based monitoring and control interface for the IoT Durian Disease Detector system. The dashboard provides comprehensive environmental telemetry visualization, physical actuator control, and QR-code-based tree profile retrieval for farm management.
 
